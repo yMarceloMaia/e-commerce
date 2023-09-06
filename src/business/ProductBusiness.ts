@@ -9,4 +9,8 @@ export class ProductBusiness {
         const res = await this.productDatabase.getProducts()
         return res
     }
+
+    public updatePrice = async () => {
+        
+    }
 }
