@@ -29,43 +29,46 @@ export class ProductBusiness {
 
     public getPacks = async () => {
         const packs = await this.productDatabase.getPacks()
-
-        const infoPacks: Pack[] = []
+        
+        const infoPacks: any[] = []
         for (let pack of packs) {
-            let i = 0
-            const product = await this.productDatabase.getProductsById(pack.product_id)
-
-            const infoPack = {
-                id: pack.id,
-                packId: pack.pack_id,
-                products: [
-                    {
-                        productId: pack.product_id,
-                        quantity: pack.qty,
-                        productCostPrice: +product.cost_price,
-                        productSalesPrice: +product.sales_price
-                    }
-                ]
-            }
             const packExist = infoPacks.find(p => p.packId === pack.pack_id)
-            // console.log({packExist})
-            console.log(infoPacks[i])
             if (packExist) {
-                infoPacks[i].products.push({
-                    productId: pack.product_id,
-                    quantity: pack.qty,
-                    productCostPrice: +product.cost_price,
-                    productSalesPrice: +product.sales_price
+                packExist.products.push({
+                    code: pack.code,
+                    name: pack.name,
+                    costPrice: +pack.cost_price,
+                    salesPrice: +pack.sales_price,
+                    quantity: pack.qty
                 })
-                i++
             } else {
-                infoPacks.push(infoPack)
-                i++
+                infoPacks.push({
+                    id: pack.id,
+                    packId: pack.pack_id,
+                    pricePack: 0,
+                    products: [
+                        {
+                            code: pack.code,
+                            name: pack.name,
+                            costPrice: +pack.cost_price,
+                            salesPrice: +pack.sales_price,
+                            quantity: pack.qty
+                        }
+                    ]
+                })
             }
         }
 
+        const infoPacksWitchPrices = infoPacks.map((pack) => {
+            let pricePack = 0
+            for(let product of pack.products){
+                pricePack += product.salesPrice * product.quantity
+            }
+            return {...pack, pricePack: +pricePack.toFixed(2)}
+        })
+        
 
-        return infoPacks
+        return infoPacksWitchPrices
     }
 
     public updatePriceProduct = async (buffer: any) => {
@@ -102,7 +105,7 @@ export class ProductBusiness {
             productModel.costPrice < productNewPrice && (productModel.salesPrice = productNewPrice)
 
             console.log(productModel)
-            // await this.productDatabase.updateProductById(Number(product.productCode), productModel.getProductDb())
+            await this.productDatabase.updateProductById(Number(product.productCode), productModel.getProductDb())
         }
 
 

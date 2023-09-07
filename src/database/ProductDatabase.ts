@@ -20,6 +20,7 @@ export class ProductDatabase extends BaseDatabase {
 
     public getPacks = async () => {
         const res = await BaseDatabase.connection(ProductDatabase.TABLE_PACKS)
+            .innerJoin(ProductDatabase.TABLE_PRODUCTS, "packs.product_id", "=", "products.code")
         return res
     }
 }
