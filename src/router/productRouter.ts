@@ -16,5 +16,6 @@ const productController = new ProductController(
 
 productRouter.get("/", productController.getProducts)
 productRouter.get("/packs", productController.getPacks)
+productRouter.get("/packs/:id", productController.getPackById)
 productRouter.post("/", multerConfig.single("file"), productController.updatePrice)
 

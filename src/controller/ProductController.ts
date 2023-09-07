@@ -26,6 +26,22 @@ export class ProductController {
         }
     }
 
+    public getPackById = async (req: Request, res: Response) => {
+        try {
+            const id = req.params.id
+            const response = await this.productBusiness.getPackById(id)
+            res.status(200).send(response)
+        } catch (error) {
+            console.log(error)
+
+            if (error instanceof BaseError) {
+                res.status(error.statusCode).send(error.message)
+            } else {
+                res.status(500).send("Erro inesperado")
+            }
+        }
+    }
+
     public getPacks = async (req: Request, res: Response) => {
         try {
             const response = await this.productBusiness.getPacks()
