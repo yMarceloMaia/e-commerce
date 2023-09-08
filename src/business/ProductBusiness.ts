@@ -33,11 +33,6 @@ export class ProductBusiness {
         return res
     }
 
-    public getPackById = async (id: string) => {
-        const pack = await this.productDatabase.getPackById(id)
-    }
-
-
     public getPacks = async () => {
         const packs = await this.productDatabase.getPacks()
 
@@ -57,6 +52,7 @@ export class ProductBusiness {
                     id: pack.id,
                     packId: pack.pack_id,
                     pricePack: 0,
+                    costPricePack: 0,
                     products: [
                         {
                             code: pack.code,
@@ -72,10 +68,12 @@ export class ProductBusiness {
 
         const infoPacksWitchPrices = infoPacks.map((pack) => {
             let pricePack = 0
+            let priceCostPack = 0
             for (let product of pack.products) {
                 pricePack += product.salesPrice * product.quantity
+                priceCostPack += product.costPrice * product.quantity
             }
-            return { ...pack, pricePack: +pricePack.toFixed(2) }
+            return { ...pack, pricePack: +pricePack.toFixed(2), costPricePack: +priceCostPack.toFixed(2) }
         })
 
 
@@ -83,7 +81,6 @@ export class ProductBusiness {
     }
 
     public updatePriceProduct = async (buffer: any) => {
-
         // Verificar se o arquivo recebido possui os campos necessários
         const readableFile = new Readable()
         readableFile.push(buffer)
@@ -140,42 +137,42 @@ export class ProductBusiness {
                 }
             }
 
-            for (let pack of packs) {
-                const packDb = await this.productDatabase.getProductsById(Number(pack.packCode))
+            const packDb = await this.getPacks()
 
+            let updatedPacks
+            for (let pack of packs) {
                 if (!packDb) throw new BadRequestError(`Produto com código "${pack.packCode}" não encontrado`)
 
-                
-
+                updatedPacks = await this.verifyPricePacks(pack)
             }
-            console.log(packs)
 
-            return { message: "Preços dos packs/produtos atualizados com sucesso" }
+            return { message: "Preços dos packs/produtos atualizados com sucesso", updatedPacks }
         }
-        console.log(productsLines)
-
-        // for (let product of products) {
-        //     const productDb = await this.productDatabase.getProductsById(Number(product.productCode))
-
-        //     const productModel = new Product(
-        //         productDb.code,
-        //         productDb.name,
-        //         productDb.cost_price,
-        //         productDb.sales_price
-        //     )
-        //     const productNewPrice = Number(product.newPrice)
-
-        //     productModel.costPrice < productNewPrice && (productModel.salesPrice = productNewPrice)
-
-        //     // await this.productDatabase.updateProductById(Number(product.productCode), productModel.getProductDb())
-        // }
-
-
-
     }
 
+    public verifyPricePacks = async (pack: any) => {
+        const packsDb = await this.getPacks()
 
-    public updatePricePack = async (products: any) => {
+        for(let packDb of packsDb){
+            if (packDb.packId === +pack.packCode) {
+                for (let prod of packDb.products) {
+                    const product = new Product(
+                        prod.code,
+                        prod.name,
+                        prod.costPrice,
+                        prod.salesPrice
+                    )
+                    const productRatio = (product.salesPrice * prod.quantity) / packDb.pricePack
+                    const productIncrease = (productRatio * (pack.newPricePack - packDb.pricePack)) / prod.quantity
+                    const newPriceProduct = product.salesPrice + productIncrease
+                    product.salesPrice = +newPriceProduct.toFixed(2)
 
+                    await this.productDatabase.updateProductById(product.id, product.getProductDb())
+                }
+                packDb.pricePack = +pack.newPricePack
+            }
+        }
+
+       return packsDb
     }
 }
