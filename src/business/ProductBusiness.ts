@@ -80,8 +80,90 @@ export class ProductBusiness {
         return infoPacksWitchPrices
     }
 
+    // public updatePriceProduct = async (buffer: any) => {
+    //     const readableFile = new Readable()
+    //     readableFile.push(buffer)
+    //     readableFile.push(null)
+
+    //     const productsLine = readline.createInterface({ input: readableFile })
+    //     const productsLines = []
+    //     for await (let line of productsLine) {
+    //         productsLines.push(line)
+    //     }
+
+    //     if (productsLines[0].includes("product_code")) {
+
+    //         const products: ProductDTO[] = []
+    //         for await (let line of productsLines) {
+    //             const productLineSplit = line.split(",")
+    //             if (Number(productLineSplit[0])) {
+    //                 products.push({
+    //                     productCode: productLineSplit[0],
+    //                     newPrice: productLineSplit[1]
+    //                 })
+    //             }
+    //         }
+
+    //         for (let product of products) {
+    //             const productDb = await this.productDatabase.getProductsById(Number(product.productCode))
+
+    //             if (!productDb) throw new BadRequestError(`Produto com código "${product.productCode}" não encontrado`)
+
+    //             const productModel = new Product(
+    //                 productDb.code,
+    //                 productDb.name,
+    //                 productDb.cost_price,
+    //                 productDb.sales_price
+    //             )
+    //             const productNewPrice = Number(product.newPrice)
+
+    //             productModel.costPrice < productNewPrice && (productModel.salesPrice = productNewPrice)
+
+    //             await this.productDatabase.updateProductById(Number(product.productCode), productModel.getProductDb())
+
+
+    //         }
+
+    //         return { message: "Preços dos produtos atualizados com sucesso" }
+
+    //     } else {
+    //         const packs = []
+    //         for await (let line of productsLines) {
+    //             const productLineSplit = line.split(",")
+    //             if (Number(productLineSplit[0])) {
+    //                 packs.push({
+    //                     packCode: productLineSplit[0],
+    //                     newPricePack: productLineSplit[1]
+    //                 })
+    //             }
+    //         }
+
+    //         const packDb = await this.getPacks()
+
+    //         let updatedPacks = []
+    //         for (let pack of packs) {
+    //             if (!packDb) throw new BadRequestError(`Produto com código "${pack.packCode}" não encontrado`)
+
+    //             updatedPacks = await this.updatePriceProductByPricePack(pack)
+    //         }
+
+    //         for (let updatePack of updatedPacks) {
+    //             const pack = await this.productDatabase.getProductsById(updatePack.packId)
+
+    //             const packDB = {
+    //                 code: pack.code,
+    //                 name: pack.name,
+    //                 cost_price: updatePack.costPricePack,
+    //                 sales_price: updatePack.pricePack
+    //             }
+    //             await this.productDatabase.updateProductById(updatePack.packId, packDB)
+    //         }
+
+    //         return { message: "Preços dos packs/produtos atualizados com sucesso", updatedPacks }
+    //     }
+    // }
+
     public updatePriceProduct = async (buffer: any) => {
-        // Verificar se o arquivo recebido possui os campos necessários
         const readableFile = new Readable()
         readableFile.push(buffer)
         readableFile.push(null)
@@ -92,69 +174,105 @@ export class ProductBusiness {
             productsLines.push(line)
         }
 
-        if (productsLines[0].includes("product_code")) {
+        // if (productsLines[0].includes("product_code")) {
 
-            const products: ProductDTO[] = []
-            for await (let line of productsLines) {
-                const productLineSplit = line.split(",")
-                if (Number(productLineSplit[0])) {
-                    products.push({
-                        productCode: productLineSplit[0],
-                        newPrice: productLineSplit[1]
-                    })
-                }
+        const products: ProductDTO[] = []
+        for await (let line of productsLines) {
+            const productLineSplit = line.split(",")
+            if (Number(productLineSplit[0])) {
+                products.push({
+                    productCode: productLineSplit[0],
+                    newPrice: productLineSplit[1]
+                })
             }
-
-            for (let product of products) {
-                const productDb = await this.productDatabase.getProductsById(Number(product.productCode))
-
-                if (!productDb) throw new BadRequestError(`Produto com código "${product.productCode}" não encontrado`)
-
-                const productModel = new Product(
-                    productDb.code,
-                    productDb.name,
-                    productDb.cost_price,
-                    productDb.sales_price
-                )
-                const productNewPrice = Number(product.newPrice)
-
-                productModel.costPrice < productNewPrice && (productModel.salesPrice = productNewPrice)
-
-                await this.productDatabase.updateProductById(Number(product.productCode), productModel.getProductDb())
-
-            }
-            return { message: "Preços dos produtos atualizados com sucesso" }
-        } else {
-
-            const packs = []
-            for await (let line of productsLines) {
-                const productLineSplit = line.split(",")
-                if (Number(productLineSplit[0])) {
-                    packs.push({
-                        packCode: productLineSplit[0],
-                        newPricePack: productLineSplit[1]
-                    })
-                }
-            }
-
-            const packDb = await this.getPacks()
-
-            let updatedPacks
-            for (let pack of packs) {
-                if (!packDb) throw new BadRequestError(`Produto com código "${pack.packCode}" não encontrado`)
-
-                updatedPacks = await this.verifyPricePacks(pack)
-            }
-
-            return { message: "Preços dos packs/produtos atualizados com sucesso", updatedPacks }
         }
+
+        for (let product of products) {
+            const productDb = await this.productDatabase.getProductsById(Number(product.productCode))
+
+            if (!productDb) throw new BadRequestError(`Produto com código "${product.productCode}" não encontrado`)
+
+            const productModel = new Product(
+                productDb.code,
+                productDb.name,
+                productDb.cost_price,
+                productDb.sales_price
+            )
+            const productNewPrice = Number(product.newPrice)
+
+            productModel.costPrice < productNewPrice && (productModel.salesPrice = productNewPrice)
+            if (product.productCode.length == 2) {
+                await this.productDatabase.updateProductById(Number(product.productCode), productModel.getProductDb())
+            } else {
+                const packDb = await this.getPacks()
+
+                let updatedPacks = []
+                for (let pack of products) {
+                    if (!packDb) throw new BadRequestError(`Produto com código "${pack.productCode}" não encontrado`)
+                    // console.log("AAAAAAAAAAA")
+                    updatedPacks = await this.updatePriceProductByPricePack(pack)
+                }
+
+                for (let updatePack of updatedPacks) {
+                    const pack = await this.productDatabase.getProductsById(updatePack.packId)
+
+                    const packDB = {
+                        code: pack.code,
+                        name: pack.name,
+                        cost_price: updatePack.costPricePack,
+                        sales_price: updatePack.pricePack
+                    }
+                    
+                    await this.productDatabase.updateProductById(updatePack.packId, packDB)
+                }
+                
+            }
+            // if(product.productCode)
+        }
+
+        return { message: "Preços dos produtos atualizados com sucesso" }
+
+        // } else {
+        //     const packs = []
+        //     for await (let line of productsLines) {
+        //         const productLineSplit = line.split(",")
+        //         if (Number(productLineSplit[0])) {
+        //             packs.push({
+        //                 packCode: productLineSplit[0],
+        //                 newPricePack: productLineSplit[1]
+        //             })
+        //         }
+        //     }
+
+        //     const packDb = await this.getPacks()
+
+        //     let updatedPacks = []
+        //     for (let pack of packs) {
+        //         if (!packDb) throw new BadRequestError(`Produto com código "${pack.packCode}" não encontrado`)
+
+        //         updatedPacks = await this.updatePriceProductByPricePack(pack)
+        //     }
+
+        //     for (let updatePack of updatedPacks) {
+        //         const pack = await this.productDatabase.getProductsById(updatePack.packId)
+
+        //         const packDB = {
+        //             code: pack.code,
+        //             name: pack.name,
+        //             cost_price: updatePack.costPricePack,
+        //             sales_price: updatePack.pricePack
+        //         }
+        //         await this.productDatabase.updateProductById(updatePack.packId, packDB)
+        //     }
+
+        //     return { message: "Preços dos packs/produtos atualizados com sucesso", updatedPacks }
+        // }
     }
 
-    public verifyPricePacks = async (pack: any) => {
+    public updatePriceProductByPricePack = async (pack: any) => {
         const packsDb = await this.getPacks()
-
-        for(let packDb of packsDb){
-            if (packDb.packId === +pack.packCode) {
+        for (let packDb of packsDb) {
+            if (packDb.packId === +pack.productCode) {
                 for (let prod of packDb.products) {
                     const product = new Product(
                         prod.code,
@@ -163,16 +281,16 @@ export class ProductBusiness {
                         prod.salesPrice
                     )
                     const productRatio = (product.salesPrice * prod.quantity) / packDb.pricePack
-                    const productIncrease = (productRatio * (pack.newPricePack - packDb.pricePack)) / prod.quantity
+                    const productIncrease = (productRatio * (pack.newPrice - packDb.pricePack)) / prod.quantity
                     const newPriceProduct = product.salesPrice + productIncrease
                     product.salesPrice = +newPriceProduct.toFixed(2)
 
                     await this.productDatabase.updateProductById(product.id, product.getProductDb())
                 }
-                packDb.pricePack = +pack.newPricePack
+                packDb.pricePack = +pack.newPrice
             }
         }
 
-       return packsDb
+        return packsDb
     }
 }

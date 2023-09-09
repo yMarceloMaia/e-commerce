@@ -15,6 +15,7 @@ export class ProductDatabase extends BaseDatabase {
     }
 
     public updateProductById = async (id: number, product: any): Promise<void> => {
+        // console.log({id, product})
         await BaseDatabase.connection(ProductDatabase.TABLE_PRODUCTS).where({code: id}).update(product)
     }
 
