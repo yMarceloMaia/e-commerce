@@ -18,6 +18,12 @@ export class ProductDatabase extends BaseDatabase {
         await BaseDatabase.connection(ProductDatabase.TABLE_PRODUCTS).where({code: id}).update(product)
     }
 
+    public getPackById = async (id: number) => {
+        const [res] = await BaseDatabase.connection(ProductDatabase.TABLE_PACKS)
+            .where({pack_id: id})
+        return res
+    }
+
     public getPacks = async () => {
         const res = await BaseDatabase.connection(ProductDatabase.TABLE_PACKS)
             .innerJoin(ProductDatabase.TABLE_PRODUCTS, "packs.product_id", "=", "products.code")

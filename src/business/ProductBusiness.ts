@@ -11,12 +11,6 @@ interface ProductPack {
     productSalesPrice: number
 }
 
-interface Pack {
-    id: number,
-    packId: number,
-    products: ProductPack[]
-}
-
 export class ProductBusiness {
     constructor(
         private productDatabase: ProductDatabase
@@ -29,7 +23,7 @@ export class ProductBusiness {
 
     public getPacks = async () => {
         const packs = await this.productDatabase.getPacks()
-        
+
         const infoPacks: any[] = []
         for (let pack of packs) {
             const packExist = infoPacks.find(p => p.packId === pack.pack_id)
@@ -46,6 +40,7 @@ export class ProductBusiness {
                     id: pack.id,
                     packId: pack.pack_id,
                     pricePack: 0,
+                    costPricePack: 0,
                     products: [
                         {
                             code: pack.code,
@@ -61,27 +56,31 @@ export class ProductBusiness {
 
         const infoPacksWitchPrices = infoPacks.map((pack) => {
             let pricePack = 0
-            for(let product of pack.products){
+            let priceCostPack = 0
+            for (let product of pack.products) {
                 pricePack += product.salesPrice * product.quantity
+                priceCostPack += product.costPrice * product.quantity
             }
-            return {...pack, pricePack: +pricePack.toFixed(2)}
+            return { ...pack, pricePack: +pricePack.toFixed(2), costPricePack: +priceCostPack.toFixed(2) }
         })
-        
+
 
         return infoPacksWitchPrices
     }
 
     public updatePriceProduct = async (buffer: any) => {
-
-        // Verificar se o arquivo recebido possui os campos necessários
         const readableFile = new Readable()
         readableFile.push(buffer)
         readableFile.push(null)
 
         const productsLine = readline.createInterface({ input: readableFile })
+        const productsLines = []
+        for await (let line of productsLine) {
+            productsLines.push(line)
+        }
 
         const products: ProductDTO[] = []
-        for await (let line of productsLine) {
+        for await (let line of productsLines) {
             const productLineSplit = line.split(",")
             if (Number(productLineSplit[0])) {
                 products.push({
@@ -90,9 +89,11 @@ export class ProductBusiness {
                 })
             }
         }
-
+        
         for (let product of products) {
             const productDb = await this.productDatabase.getProductsById(Number(product.productCode))
+
+            if (!productDb) throw new BadRequestError(`Produto com código "${product.productCode}" não encontrado`)
 
             const productModel = new Product(
                 productDb.code,
@@ -104,47 +105,56 @@ export class ProductBusiness {
 
             productModel.costPrice < productNewPrice && (productModel.salesPrice = productNewPrice)
 
-            console.log(productModel)
+            const packDb = await this.getPacks()
+            
             await this.productDatabase.updateProductById(Number(product.productCode), productModel.getProductDb())
+
+            let updatedPacks = []
+            for (let pack of products) {
+                if (!packDb) throw new BadRequestError(`Produto com código "${pack.productCode}" não encontrado`)
+
+                updatedPacks = await this.updatePriceProductByPricePack(pack)
+            }
+            
+            for (let updatePack of updatedPacks) {
+                const pack = await this.productDatabase.getProductsById(updatePack.packId)
+
+                const packDB = {
+                    code: pack.code,
+                    name: pack.name,
+                    cost_price: updatePack.costPricePack,
+                    sales_price: updatePack.pricePack
+                }
+                
+                await this.productDatabase.updateProductById(updatePack.packId, packDB)
+            }
         }
 
-
-        return { message: "Preços atualizados com sucesso" }
-
+        return { message: "Preços dos produtos atualizados com sucesso" }
     }
 
-    // public updatePriceProduct = async (products: any) => {
-    //     const objProducts = []
-    //     for (let product of products) {
-    //         if (Number(product[0])) {
-    //             objProducts.push({
-    //                 productCode: product[0],
-    //                 newPrice: product[1]
-    //             })
-    //         }
-    //     }
+    public updatePriceProductByPricePack = async (pack: any) => {
+        const packsDb = await this.getPacks()
+        for (let packDb of packsDb) {
+            if (packDb.packId === +pack.productCode) {
+                for (let prod of packDb.products) {
+                    const product = new Product(
+                        prod.code,
+                        prod.name,
+                        prod.costPrice,
+                        prod.salesPrice
+                    )
+                    const productRatio = (product.salesPrice * prod.quantity) / packDb.pricePack
+                    const productIncrease = (productRatio * (pack.newPrice - packDb.pricePack)) / prod.quantity
+                    const newPriceProduct = product.salesPrice + productIncrease
+                    product.salesPrice = +newPriceProduct.toFixed(2)
 
-    //     for (let product of objProducts) {
-    //         const productDb = await this.productDatabase.getProductsById(Number(product.productCode))
+                    await this.productDatabase.updateProductById(product.id, product.getProductDb())
+                }
+                packDb.pricePack = +pack.newPrice
+            }
+        }
 
-    //         const productModel = new Product(
-    //             productDb.code,
-    //             productDb.name,
-    //             productDb.cost_price,
-    //             productDb.sales_price
-    //         )
-    //         const productNewPrice = Number(product.newPrice)
-
-    //         productModel.costPrice <  productNewPrice && (productModel.salesPrice = productNewPrice)
-
-    //         await this.productDatabase.updateProductById(product.productCode, productModel.getProductDb())
-    //     }
-
-
-    //     return {message: "Preços atualizados com sucesso"}
-    // }
-
-    public updatePricePack = async (products: any) => {
-
+        return packsDb
     }
 }

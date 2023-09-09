@@ -1,4 +1,3 @@
-
 export interface ProductDTO {
     productCode: string,
     newPrice: string
